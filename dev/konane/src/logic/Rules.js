@@ -1,7 +1,7 @@
 import Board from "./Board";
-import {flatmap} from "./utils";
+import {flatmap} from "../utils";
 
-export default class Rules {
+export default class {
     constructor(width, height) {
         this._board = null;
         this.width = width;
@@ -11,8 +11,9 @@ export default class Rules {
     // Accessor for the board, creates it if it doesn't exist.
     get board() {
         if(this._board === null){
-            this._board = this._getInitialBoard();
+            this._board = this._getInitialBoard(this.width, this.height);
         }
+        return this._board;
     }
 
     _getInitialBoard(width, height){
@@ -21,18 +22,15 @@ export default class Rules {
         for(var i=0; i<height; i++) {
             var row = [];
             // p0 will be the first piece in the row, p1 the second, and they'll alternate.
-            var [p0, p1] = (i % 2 == 0) ? [0, 1] : [1, 0];
+            var [p0, p1] = (i % 2 === 0) ? [0, 1] : [1, 0];
 
             for (var j=0; j < width; j++){
-                row.push(j % 2 == 0 ? p0 : p1);
+                row.push(j % 2 === 0 ? p0 : p1);
             }
 
             board.push(row)
         }
 
-        //set these for easy access
-        board.width = width;
-        board.height = height;
         return board
     }
 
@@ -50,12 +48,12 @@ export default class Rules {
 
         // In the first turn, black must remove a stone
         if(turn === 0) {
-            return getBlackPieceRemovalMoves();
+            return this.getBlackPieceRemovalMoves();
         }
 
         // In the second turn, white must remove a stone
         if(turn === 1) {
-            return getWhitePieceRemovalMoves();
+            return this.getWhitePieceRemovalMoves();
         }
 
         // All other moves must be jumps.
@@ -77,17 +75,19 @@ export default class Rules {
         // Returns an Array of moves representing stones the white player can take away in his first turn
 
         // Get the position of the stone black has removed
-        var blackRemoved = this.getBlackPieceRemovalMoves().filter((move) => {
-            return this.getPieceAt(move.pos) === -1;
-        })
+        var blackRemoved = this.getBlackPieceRemovalMoves();
+        console.log(blackRemoved);
+        blackRemoved = blackRemoved.filter((move) => {
+            return this.board.getPieceAt(move.from).type === -1;
+        });
 
         // Just a sanity check, this method shouldn't be called if black hasn't removed
         // a stone yet. Also
         if (blackRemoved.length == 0){
-            throw TypeError("Black hasn't removed a piece yet.");
+            throw Error("Black hasn't removed a piece yet.");
         }
 
-        var blackpos = blackRemoved[0].pos;
+        var blackpos = blackRemoved[0].from;
         var positions = []; // the positions white could remove
 
         // If the piece black removed is not next to the top edge, white can remove the piece above.
@@ -121,24 +121,29 @@ export default class Rules {
 
     getValidMovesForPlayer(player){
         var pieces = this.board.getPiecesForPlayer(player);
-        return flatmap(pieces, this.getMovesForPiece);
+        return flatmap(pieces, this.getMovesForPiece.bind(this));
     }
 
     getMovesForPiece(piece){
         return flatmap(this.getMoveDirections(), (direction) => this._getMovesforPieceInDirection(piece, direction));
     }
 
+    getMoveDirections() {
+        return [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    }
+
     _getMovesforPieceInDirection(currentPiece, direction) {
+        console.log("currentPiece: ", currentPiece);
         let moves = [];
         let prevPiece = null;
         let captured = []
         for(let piece of this.board.getPiecesInLineFrom(currentPiece.position, direction)) {
-            if(piece.type == currentPiece.type) {
+            if(piece.type === currentPiece.type) {
                 return moves;
             }
             
             if(piece.type === -1){
-                if(prevPiece.type === -1 || prevPiece === null){
+                if(prevPiece === null || prevPiece.type === -1) {
                     return moves;
                 } else {
                     moves.push({
@@ -155,6 +160,8 @@ export default class Rules {
             } else {
                 captured.push(piece);
             }
+            prevPiece = piece;
         }
+        return moves;
     }
 }

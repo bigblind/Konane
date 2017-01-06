@@ -8,11 +8,19 @@ export default class GameState {
     
 
     getValidMoves() {
+        console.log("getting valid moves in round " + this.currentTurn);
         return this.rules.getValidMoves(this.currentTurn);
     }
 
+    isGameOver() {
+        return this.getValidMoves().length === 0;
+    }
+
     applyMove(move) {
+        console.log("ApplyMove called");
+        console.log(move);
         this.applyMoveToBoard(move, this.board);
+        this.currentTurn += 1;
     }
 
     applyMoveToBoard(move, board) {
@@ -26,6 +34,14 @@ export default class GameState {
                 break;
             default:
                 throw new Error("Unknown move type: " + move.type);
+        }
+    }
+
+    getPhase() {
+        if(this.currentTurn < 2) {
+            return "remove";
+        } else {
+            return "move";
         }
     }
 }
